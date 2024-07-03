@@ -1,0 +1,18 @@
+{% extends "layouts/app.twig" %}
+
+{% block content %}
+    <div>
+        BUY:
+        <form action="/currencies/buy" method="POST">
+            <div>
+                <label for="symbol">Symbol</label>
+                <input type="text" id="symbol" name="symbol" required />
+            </div>
+            <div>
+                <label for="amount">Amount</label>
+                <input type="number" id="amount" name="amount" required />
+            </div>
+            <button type="submit">Buy</button>
+        </form>
+    </div>
+{% endblock %}

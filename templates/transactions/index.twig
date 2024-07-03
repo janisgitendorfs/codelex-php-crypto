@@ -1,0 +1,10 @@
+Hello transactions!
+
+<ul>
+    {% for transaction in transactions %}
+    <li>
+        {{ transaction.type }} - {{ transaction.symbol }} - x{{ transaction.amount }} -
+        ${{ transaction.price|number_format(2, '.', ',') }}
+    </li>
+    {% endfor %}
+</ul>
