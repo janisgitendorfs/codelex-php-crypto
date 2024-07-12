@@ -4,6 +4,7 @@ namespace CryptoApp\Repositories\Transaction;
 
 use CryptoApp\Models\Transaction;
 use CryptoApp\Models\User;
+use CryptoApp\Repositories\Exceptions\FailedInsertIntoDatabaseException;
 use Exception;
 use Medoo\Medoo;
 
@@ -56,7 +57,7 @@ class SqliteTransactionRepository implements TransactionRepository
 
     public function save(Transaction $transaction): void
     {
-        try{
+        try {
             $this->database->insert('transactions', [
                 'type' => $transaction->getType(),
                 'symbol' => strtoupper($transaction->getSymbol()),
@@ -64,8 +65,12 @@ class SqliteTransactionRepository implements TransactionRepository
                 'price' => $transaction->getPrice(),
                 'timestamp' => $transaction->getTimestamp(),
             ]);
-        } catch (Exception $e) {
-            echo "Error: " . $e->getMessage();
+        } catch (Exception $exception) {
+            throw new FailedInsertIntoDatabaseException(
+                "[Transactions] Failed to save {$transaction->getSymbol()} into",
+                500,
+                $exception
+            );
         }
     }
 }

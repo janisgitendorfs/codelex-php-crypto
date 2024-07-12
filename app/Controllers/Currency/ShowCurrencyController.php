@@ -11,7 +11,7 @@ class ShowCurrencyController
     private ShowCurrencyService $service;
 
     public function __construct(
-        ShowCurrencyService $service,
+        ShowCurrencyService $service
     )
     {
         $this->service = $service;

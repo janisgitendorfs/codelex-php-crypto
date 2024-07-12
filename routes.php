@@ -1,9 +1,11 @@
 <?php
 
+use CryptoApp\Controllers\ArticlesController;
 use CryptoApp\Controllers\Currency\BuyCurrencyController;
 use CryptoApp\Controllers\Currency\IndexCurrencyController;
 use CryptoApp\Controllers\Currency\SellCurrencyController;
 use CryptoApp\Controllers\Currency\ShowCurrencyController;
+use CryptoApp\Controllers\Currency\TestDeleteController;
 use CryptoApp\Controllers\TransactionController;
 
 return [
@@ -17,4 +19,9 @@ return [
 
     ['GET', '/currencies/{symbol}', [ShowCurrencyController::class, 'show']],
     ['POST', '/currencies/{symbol}/sell', [SellCurrencyController::class, 'sell']],
+
+    ['DELETE', '/currencies/{id}', [TestDeleteController::class, 'delete']],
+
+    ['GET', '/articles', [ArticlesController::class, 'index']],
+    ['GET', '/articles/{id}', [ArticlesController::class, 'show']],
 ];

@@ -2,6 +2,12 @@
 
 require_once 'vendor/autoload.php';
 
+session_start();
+
+use CryptoApp\Repositories\Article\ArticleRepository;
+use CryptoApp\Repositories\Article\SqliteArticleRepository;
+use CryptoApp\Repositories\Comment\CommentRepository;
+use CryptoApp\Repositories\Comment\SqliteCommentRepository;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 
@@ -14,6 +20,7 @@ use CryptoApp\Services\User\AuthUserService;
 use CryptoApp\Wallet;
 use Dotenv\Dotenv;
 use Psr\Log\LoggerInterface;
+use Respect\Validation\Validator;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 
@@ -22,6 +29,10 @@ $dotenv->load();
 
 $loader = new FilesystemLoader('templates');
 $twig = new Environment($loader);
+
+$twig->addGlobal('flashMessage', $_SESSION['_message'] ?? null);
+$twig->addGlobal('input', $_SESSION['_input'] ?? []);
+$twig->addGlobal('errors', $_SESSION['_errors'] ?? []);
 
 $container = new DI\Container();
 $container->set(
@@ -32,28 +43,23 @@ $container->set(
     TransactionRepository::class,
     new SqliteTransactionRepository()
 );
-
-// build logger
-switch ($_ENV['APP_LOGGER'])
-{
-    case 'monolog':
-        $logger = (new Logger('app'))->pushHandler(
-            new StreamHandler('storage/logs/app.log', Logger::DEBUG)
-        );
-        break;
-    default:
-        $logger = new \CryptoApp\EmptyLogger();
-        break;
-}
-
 $container->set(
-    LoggerInterface::class,
-    $logger
+    ArticleRepository::class,
+    new SqliteArticleRepository()
+);
+$container->set(
+    CommentRepository::class,
+    new SqliteCommentRepository()
+);
+$container->set(
+    Validator::class,
+    Validator::create()
 );
 
-// $log = new Logger('name');
-//$log->pushHandler(new StreamHandler('path/to/your.log', Level::Warning));
-
+$logger = (new Logger('app'))->pushHandler(
+    new StreamHandler('storage/logs/app.log', Logger::DEBUG)
+);
+$container->set(LoggerInterface::class, $logger);
 
 $transactionRepository = new SqliteTransactionRepository();
 
@@ -71,7 +77,7 @@ $dispatcher = FastRoute\simpleDispatcher(function(FastRoute\RouteCollector $r) {
     }
 });
 
-$httpMethod = $_SERVER['REQUEST_METHOD'];
+$httpMethod = $_POST['_method'] ?? $_SERVER['REQUEST_METHOD'];
 $uri = $_SERVER['REQUEST_URI'];
 
 if (false !== $pos = strpos($uri, '?')) {
@@ -82,7 +88,7 @@ $uri = rawurldecode($uri);
 $routeInfo = $dispatcher->dispatch($httpMethod, $uri);
 switch ($routeInfo[0]) {
     case FastRoute\Dispatcher::NOT_FOUND:
-        var_dump('404 not found.');
+        echo $twig->render('errors/404.twig');
         break;
     case FastRoute\Dispatcher::METHOD_NOT_ALLOWED:
         $allowedMethods = $routeInfo[1];
@@ -94,7 +100,15 @@ switch ($routeInfo[0]) {
 
         [$controller, $method] = $handler;
 
-        $response = ($container->get($controller))->$method(...array_values($vars));
+        try {
+            $response = ($container->get($controller))->$method(...array_values($vars));
+        } catch (Exception $exception)
+        {
+            $logger->error($exception);
+
+            echo $twig->render('errors/500.twig');
+            return;
+        }
 
         if ($response instanceof \CryptoApp\Response)
         {
@@ -102,6 +116,11 @@ switch ($routeInfo[0]) {
                 $response->getTemplate() . '.twig',
                 $response->getData()
             );
+
+            // flash message
+            unset($_SESSION['_message']);
+            unset($_SESSION['_input']);
+            unset($_SESSION['_errors']);
         }
 
         if ($response instanceof \CryptoApp\RedirectResponse)

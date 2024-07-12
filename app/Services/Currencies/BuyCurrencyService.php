@@ -4,7 +4,9 @@ namespace CryptoApp\Services\Currencies;
 
 use CryptoApp\Models\Transaction;
 use CryptoApp\Repositories\Currency\CurrencyRepository;
+use CryptoApp\Repositories\Exceptions\FailedInsertIntoDatabaseException;
 use CryptoApp\Repositories\Transaction\TransactionRepository;
+use CryptoApp\Services\Exceptions\FailedToBuyCurrencyException;
 use Exception;
 use Psr\Log\LoggerInterface;
 
@@ -42,10 +44,12 @@ class BuyCurrencyService
 
             $this->logger->info('[BUY] ' . $symbol . ' x ' . $amount . ' - ' . $currency->getPrice());
 
-        } catch (Exception $e) {
-            // echo "Error: " . $e->getMessage();
-            // TODO: throw our exception
-            var_dump($e->getMessage());
+        } catch (FailedInsertIntoDatabaseException $exception) {
+            throw new FailedToBuyCurrencyException(
+                $exception->getMessage(),
+                $exception->getCode(),
+                $exception
+            );
         }
     }
 }
